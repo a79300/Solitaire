@@ -15,3 +15,10 @@ class Settings:
         self.card_width = 70
         self.card_height = 100
         self.card_offset = 100
+
+        if page:
+            width = page.width/7
+            self.card_offset = round(width-(width*0.045),0)
+            self.card_width = round(width-(width*0.105),0)
+            self.card_height = round((self.card_width*100)/70,0)
+            self.slot_offset = round(self.card_height*1.2)
