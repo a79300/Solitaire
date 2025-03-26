@@ -321,3 +321,61 @@ class Solitaire(ft.Stack):
         )
         self.cards.append(card)
         card.place(slot)
+
+
+    def load_game(self):
+        try:
+            if not self.loading:
+                self.loading = True
+
+                game_status = json.loads(self.page.client_storage.get("save"))
+                self.controls = []
+                self.deck_passes_remaining = game_status[
+                    "deck_passes_remaining"]
+                self.create_slots()
+
+                self.cards = []
+                all_cards_data = []
+
+                stock = game_status["slots"]["stock"]["pile"]
+                waste = game_status["slots"]["waste"]["pile"]
+                foundation_slot = game_status["slots"]["foundation"]
+                tableau_slot = game_status["slots"]["tableau"]
+
+                all_cards_data.extend([(card, self.stock) for card in stock])
+                all_cards_data.extend([(card, self.waste) for card in waste])
+
+                for i, foundation_pile in enumerate(foundation_slot):
+                    all_cards_data.extend([(card, self.foundation[i])
+                                           for card in foundation_pile["pile"]
+                                           ])
+
+                for i, tableau_pile in enumerate(tableau_slot):
+                    all_cards_data.extend([(card, self.tableau[i])
+                                           for card in tableau_pile["pile"]])
+
+                for card_data, slot in all_cards_data:
+                    _suite = next(
+                        filter(lambda s: s.name == card_data["suite"],
+                               self.suites))
+                    _rank = next(
+                        filter(lambda r: r.name == card_data["rank"],
+                               self.ranks))
+                    card = Card(
+                        solitaire=self,
+                        suite=_suite,
+                        rank=_rank,
+                        face_up=card_data["face_up"],
+                    )
+                    self.cards.append(card)
+
+                self.controls.extend(self.cards)
+
+                for i, (card_data, slot) in enumerate(all_cards_data):
+                    self.cards[i].place(slot)
+
+                self.loading = False
+                self.update()
+
+        except Exception as e:
+            self.loading = False
