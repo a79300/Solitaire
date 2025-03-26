@@ -172,6 +172,24 @@ class Card(ft.GestureDetector):
 
         return [self]
 
+    def highlight_cards(self, card1, card2):
+        self.highlight_cards_color1(card1)
+        self.highlight_cards_color2(card2)
+    
+    def highlight_cards_color1(self, card):
+        color1 = "yellow"
+        card.content.border = ft.border.all(3, color1)
+        self.solitaire.update()
+    
+    def highlight_cards_color2(self, card):
+        color2 = "green"
+        try:
+            card.content.border = ft.border.all(3, color2)
+        except:
+            card.border = ft.border.all(3, color2)
+        finally:
+            self.solitaire.update()
+
     def clear_cards_border(self):
         self.solitaire.stock.border = ft.border.all(1)
 
