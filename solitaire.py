@@ -280,3 +280,44 @@ class Solitaire(ft.Stack):
         for i, card in enumerate(cards):
             card.top = source_slot.top + self.card_offset * (
                 len(source_slot.pile) - len(cards) + i)
+
+
+    def save_game(self):
+        game_state = {
+            "deck_passes_remaining": self.deck_passes_remaining,
+            "slots": {
+                "stock":
+                self._get_slot_state(self.stock),
+                "waste":
+                self._get_slot_state(self.waste),
+                "foundation":
+                [self._get_slot_state(slot) for slot in self.foundation],
+                "tableau":
+                [self._get_slot_state(slot) for slot in self.tableau],
+            },
+        }
+
+        self.page.client_storage.set("save", json.dumps(game_state))
+
+    def _get_slot_state(self, slot):
+        return {
+            "pile": [{
+                "suite": card.suite.name,
+                "rank": card.rank.name,
+                "face_up": card.face_up,
+                "top": card.top,
+                "left": card.left,
+            } for card in slot.pile]
+        }
+
+    def create_card(self, suite, rank, face_up, slot):
+        _suite = next(filter(lambda s: s.name == suite, self.suites))
+        _rank = next(filter(lambda r: r.name == rank, self.ranks))
+        card = Card(
+            solitaire=self,
+            suite=_suite,
+            rank=_rank,
+            face_up=face_up,
+        )
+        self.cards.append(card)
+        card.place(slot)
