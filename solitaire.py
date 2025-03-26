@@ -171,3 +171,112 @@ class Solitaire(ft.Stack):
             card.turn_face_down()
             card.place(self.stock)
         self.update()
+
+
+    def check_foundation_rules(self, current_card, top_card=None):
+        if top_card is not None:
+            return (current_card.suite.name == top_card.suite.name
+                    and current_card.rank.value - top_card.rank.value == 1)
+        else:
+            return current_card.rank.name == "Ace"
+
+    def check_tableau_rules(self, current_card, top_card=None):
+        if top_card is not None:
+            return (current_card.suite.color != top_card.suite.color
+                    and top_card.rank.value - current_card.rank.value == 1)
+        else:
+            return current_card.rank.name == "King"
+
+    def check_if_you_won(self):
+        cards_num = 0
+        for slot in self.foundation:
+            cards_num += len(slot.pile)
+        if cards_num == 52:
+            return True
+        return False
+
+    def record_move(self, cards, source_slot, destination_slot, was_face_up):
+
+        move = {
+            "cards": cards.copy() if isinstance(cards, list) else [cards],
+            "source": source_slot,
+            "destination": destination_slot,
+            "was_face_up": was_face_up,
+        }
+        self.move_history.append(move)
+        if was_face_up:
+            self.coins += 25
+            self.page.client_storage.set(str("coins"), self.coins)
+
+    def undo_last_move(self):
+        if not self.move_history:
+            return
+
+        last_move = self.move_history.pop()
+
+        cards = last_move["cards"]
+        source_slot = last_move["source"]
+        destination_slot = last_move["destination"]
+        was_face_up = last_move["was_face_up"]
+
+        if source_slot.type == "stock" and destination_slot.type == "waste":
+            self._undo_stock_to_waste(cards, source_slot, destination_slot)
+        else:
+            self._undo_move(cards, source_slot, destination_slot, was_face_up)
+            if was_face_up:
+                self.coins -= 30
+                if self.coins < 0:
+                    self.coins = 0
+                self.page.client_storage.set(str("coins"), self.coins)
+
+    def _undo_stock_to_waste(self, cards, source_slot, destination_slot):
+        cards_to_return = []
+        for _ in range(
+                min(self.settings.waste_size, len(destination_slot.pile))):
+            if destination_slot.pile:
+                card = destination_slot.pile[-1]
+                destination_slot.pile.remove(card)
+                card.turn_face_down()
+                card.slot = source_slot
+                source_slot.pile.append(card)
+                cards_to_return.append(card)
+
+        for card in cards_to_return:
+            card.top = source_slot.top
+            card.left = source_slot.left
+
+        self.update()
+
+    def _undo_move(self, cards, source_slot, destination_slot, was_face_up):
+        for card in cards:
+            if card in destination_slot.pile:
+                destination_slot.pile.remove(card)
+
+            if was_face_up:
+                card.turn_face_up()
+            else:
+                card.turn_face_down()
+
+            card.slot = source_slot
+            source_slot.pile.append(card)
+
+            card.top = source_slot.top
+            card.left = source_slot.left
+
+        if source_slot.type == "tableau":
+            self._adjust_tableau_cards(cards, source_slot)
+
+        if destination_slot.type == "tableau" and len(
+                destination_slot.pile) > 0:
+            top_card = destination_slot.get_top_card()
+            if not top_card.face_up:
+                top_card.turn_face_up()
+
+        all_affected_cards = source_slot.pile + destination_slot.pile
+        self.move_on_top(all_affected_cards)
+        self.update()
+
+    def _adjust_tableau_cards(self, cards, source_slot):
+        for i, card in enumerate(cards):
+            card.top = source_slot.top + self.card_offset * (
+                len(source_slot.pile) - len(cards) + i)
