@@ -105,6 +105,19 @@ class Card(ft.GestureDetector):
             self.solitaire.bounce_back(cards_to_drag)
             self.solitaire.update()
 
+    def doubleclick(self, e):
+        if self.slot.type in ("waste", "tableau") and self.face_up:
+            self.solitaire.move_on_top([self])
+            old_slot = self.slot
+            for slot in self.solitaire.foundation:
+                if self.solitaire.check_foundation_rules(self, slot.get_top_card()):
+                    self.solitaire.record_move([self], old_slot, slot, self.face_up)
+
+                    self.place(slot)
+                    self.clear_cards_border()
+                    self.solitaire.update()
+                    return
+
     def click(self, e):
         if self.slot.type == "stock":
             cards_to_draw = min(
