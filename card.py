@@ -171,3 +171,16 @@ class Card(ft.GestureDetector):
             return self.slot.pile[self.slot.pile.index(self):]
 
         return [self]
+
+    def clear_cards_border(self):
+        self.solitaire.stock.border = ft.border.all(1)
+
+        for tableau in self.solitaire.tableau:
+            tableau.border = None
+        
+        for foundation in self.solitaire.foundation:
+            foundation.border = ft.border.all(1, "outline")
+
+        for card in self.solitaire.cards:
+            card.content.border = None
+        self.solitaire.update()
