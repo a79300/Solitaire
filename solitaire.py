@@ -379,3 +379,140 @@ class Solitaire(ft.Stack):
 
         except Exception as e:
             self.loading = False
+
+    def tip_card(self):
+        # --------------------------------------------------------------------------------------------------------------------------------
+        # definição das variaveis
+        tableau_button_positions = []
+        tableau_top_positions = []
+        foundation_top_positions = []
+        ace_card = [None]
+
+        king_card = [None]
+        waste_top_card = [None]
+        stock_top_card = [None]
+
+        # --------------------------------------------------------------------------------------------------------------------------------
+        # ciraçao de todos os packs de cartas "baralho escondido":stock, "baralho virado":waste, "fundaçoes":foundation e "tabuleiro":tableau
+
+        for card in self.cards:
+            if card.face_up == True and card.slot.type not in [
+                    "foundation", "waste"
+            ]:
+                tableau_button_positions.append(card.left)
+        tableau_top_positions = dict.fromkeys(tableau_button_positions)
+        tableau_button_positions = dict.fromkeys(tableau_button_positions)
+
+        for card in self.cards:
+            if card.face_up == True:
+                if card.slot.get_top_card(
+                ) == card and card.rank.value == 1 and card.slot.type != "foundation":
+                    ace_card[0] = card
+
+                elif card.rank.value == 13 and card.slot.type != "foundation" and len(
+                        tableau_button_positions) < 7:
+                    king_card[0] = card
+
+                elif card.slot.type == "tableau":
+                    if not tableau_top_positions[card.left]:
+                        tableau_top_positions[card.left] = card
+                    elif tableau_top_positions[card.left].top < card.top:
+                        tableau_top_positions[card.left] = card
+
+                    if not tableau_button_positions[card.left]:
+                        tableau_button_positions[card.left] = card
+                    elif tableau_button_positions[card.left].top > card.top:
+                        tableau_button_positions[card.left] = card
+
+                elif card.slot.get_top_card(
+                ) == card and card.slot.type == "foundation":
+                    foundation_top_positions.append(card)
+
+                elif card.slot.get_top_card(
+                ) == card and card.slot.type == "waste":
+                    waste_top_card[0] = card
+            elif card.slot.type == "stock":
+                stock_top_card[0] = card
+
+        tableau_top_positions = list(tableau_top_positions.values())
+        tableau_button_positions = list(tableau_button_positions.values())
+
+        # --------------------------------------------------------------------------------------------------------------------------------
+        # 0 - all possible tips
+
+        # ----------------------------------------------------------------
+        # 1 - ace to foundation
+        if ace_card[0]:
+            for foundation in self.foundation:
+                if (len(foundation.pile) == 0):
+                    ace_card[0].highlight_cards(ace_card[0], foundation)
+                    return
+
+        # --------------------------------
+        #  2 - tabuleau to foundation
+        if foundation_top_positions and tableau_top_positions:
+            for foundation_card in foundation_top_positions:
+                for tableau_top_card in tableau_top_positions:
+                    if foundation_card and tableau_top_card:
+                        if (
+                            (foundation_card.rank.value) + 1
+                        ) == tableau_top_card.rank.value and foundation_card.suite.name == tableau_top_card.suite.name:
+                            tableau_top_card.highlight_cards(
+                                tableau_top_card, foundation_card)
+                            return
+
+        # --------------------------------
+        # 3 - tabuleau to tabuleau
+        if tableau_button_positions and tableau_top_positions:
+            for tableau_button_card in tableau_button_positions:
+                for tableau_top_card in tableau_top_positions:
+                    if tableau_button_card and tableau_top_card:
+                        if (
+                            (tableau_button_card.rank.value) + 1
+                        ) == tableau_top_card.rank.value and tableau_button_card.suite.color != tableau_top_card.suite.color:
+                            tableau_button_card.highlight_cards(
+                                tableau_button_card, tableau_top_card)
+                            return
+
+        # --------------------------------
+        #  4 - waste to foundation
+        if foundation_top_positions and waste_top_card[0]:
+            for foundation_card in foundation_top_positions:
+                for waste_card in waste_top_card:
+                    if foundation_card and waste_card:
+                        if (
+                            (foundation_card.rank.value) + 1
+                        ) == waste_card.rank.value and foundation_card.suite.name == waste_card.suite.name:
+                            waste_card.highlight_cards(waste_card,
+                                                       foundation_card)
+                            return
+
+        # ----------------------------------------------------------------
+        # 5 - waste to tabuleau
+        if waste_top_card[0] and tableau_top_positions:
+            for waste_card in waste_top_card:
+                for tableau_top_card in tableau_top_positions:
+                    if waste_card and tableau_top_card:
+                        if (
+                            (waste_card.rank.value) + 1
+                        ) == tableau_top_card.rank.value and waste_card.suite.color != tableau_top_card.suite.color:
+                            waste_card.highlight_cards(waste_card,
+                                                       tableau_top_card)
+                            return
+
+        # ----------------------------------------------------------------
+        # 5 - king to empty space
+        if king_card[0]:
+            for tableau in self.tableau:
+                if (len(tableau.pile) == 0):
+                    king_card[0].highlight_cards(king_card[0], tableau)
+                    return
+
+        # ----------------------------------------------------------------
+        # 7 - stock
+        if stock_top_card[0]:
+            stock_top_card[0].highlight_cards_color1(stock_top_card[0])
+        else:
+            self.stock.border = ft.border.all(10, "yellow")
+        self.update()
+        return
