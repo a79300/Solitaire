@@ -56,3 +56,118 @@ class Solitaire(ft.Stack):
             Rank("Queen", 12),
             Rank("King", 13),
         ]
+
+    def did_mount(self):
+        self.create_slots()
+        self.create_card_deck()
+        self.deal_cards()
+
+    def update_card_back(self, settings):
+        self.settings.card_back = settings.card_back
+        for card in self.cards:
+            if not card.face_up:
+                card.content.content.src = self.settings.card_back
+        self.update()
+
+    def create_slots(self):
+
+        self.stock = Slot(solitaire=self,
+                          slot_type="stock",
+                          top=0,
+                          left=0,
+                          border=ft.border.all(1))
+
+        self.waste = Slot(solitaire=self,
+                          slot_type="waste",
+                          top=0,
+                          left=self.settings.card_offset,
+                          border=None)
+
+        self.foundation = []
+        x = self.settings.card_offset * 3
+        for i in range(4):
+            self.foundation.append(
+                Slot(
+                    solitaire=self,
+                    slot_type="foundation",
+                    top=0,
+                    left=x,
+                    border=ft.border.all(1, "outline"),
+                ))
+            x += self.settings.card_offset
+
+        self.tableau = []
+        x = 0
+        for i in range(7):
+            self.tableau.append(
+                Slot(
+                    solitaire=self,
+                    slot_type="tableau",
+                    top=self.settings.slot_offset,
+                    left=x,
+                    border=None,
+                ))
+            x += self.settings.card_offset
+
+        self.controls.append(self.stock)
+        self.controls.append(self.waste)
+        self.controls.extend(self.foundation)
+        self.controls.extend(self.tableau)
+        self.update()
+
+    def create_card_deck(self):
+        self.cards = []
+
+        for suite in self.suites:
+            for rank in self.ranks:
+                file_name = f"/cards/{rank.name}_{suite.name}.svg"
+
+                self.cards.append(Card(solitaire=self, suite=suite, rank=rank))
+
+        random.shuffle(self.cards)
+        self.controls.extend(self.cards)
+        self.update()
+
+    def deal_cards(self):
+        card_index = 0
+        first_slot = 0
+        while card_index <= 27:
+            for slot_index in range(first_slot, len(self.tableau)):
+                self.cards[card_index].place(self.tableau[slot_index])
+                card_index += 1
+            first_slot += 1
+
+        for number in range(len(self.tableau)):
+
+            self.tableau[number].get_top_card().turn_face_up()
+
+        for i in range(28, len(self.cards)):
+            self.cards[i].place(self.stock)
+
+    def move_on_top(self, cards_to_drag):
+        for card in cards_to_drag:
+            if card in self.controls:
+                self.controls.remove(card)
+            self.controls.append(card)
+        self.update()
+
+    def bounce_back(self, cards):
+        i = 0
+        for card in cards:
+            card.top = self.current_top
+            if card.slot.type == "tableau":
+                card.top += i * self.card_offset
+            card.left = self.current_left
+            i += 1
+
+    def restart_stock(self):
+        cards_in_waste = self.waste.pile.copy()
+        if cards_in_waste:
+            self.record_move(cards_in_waste, self.waste, self.stock, True)
+
+        self.waste.pile.reverse()
+        while len(self.waste.pile) > 0:
+            card = self.waste.pile[0]
+            card.turn_face_down()
+            card.place(self.stock)
+        self.update()
